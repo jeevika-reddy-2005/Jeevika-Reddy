@@ -1,43 +1,41 @@
-import os
-os.environ["GOOGLE_API_KEY"]=st.secrets["GOOGLE_API_KEY"]
 import streamlit as st
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
-# Initialize LLM
+import os
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+
+# Initialize the LLM
 llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+# Set up Streamlit page
+st.set_page_config(page_title="Gemini Chatbot", layout="centered")
+st.title("🤖 Gemini Chatbot with Memory")
 
 # Initialize chat history in session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        SystemMessage(content="You are a nice AI bot.")
+        SystemMessage(content="You are a helpful assistant.")
     ]
-if "messages_display" not in st.session_state:
-    st.session_state.messages_display = []
 
-# Streamlit UI
-st.title("🤖 Gemini Chatbot")
-
-# Display previous messages
-for msg in st.session_state.messages_display:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+# Display past messages
+for msg in st.session_state.chat_history:
+    if isinstance(msg, HumanMessage):
+        st.chat_message("user").markdown(msg.content)
+    elif isinstance(msg, AIMessage):
+        st.chat_message("assistant").markdown(msg.content)
 
 # User input
 user_input = st.chat_input("Say something...")
-
 if user_input:
-    # Add human message to history
+    # Append user message
     st.session_state.chat_history.append(HumanMessage(content=user_input))
-    st.session_state.messages_display.append({"role": "user", "content": user_input})
+    st.chat_message("user").markdown(user_input)
 
-    # Get AI response
-    response = llm.invoke(user_input)
+    # Get response from Gemini
+    result = llm.invoke(chat_history)
+    response = result.content
 
-    # Add AI response to history
-    st.session_state.chat_history.append(AIMessage(content=response.content))
-    st.session_state.messages_display.append({"role": "assistant", "content": response.content})
-
-    # Display AI response
-    with st.chat_message("assistant"):
-        st.markdown(response.content)
+    # Append AI response
+    st.session_state.chat_history.append(AIMessage(content=response))
+    st.chat_message("assistant").markdown(response)
